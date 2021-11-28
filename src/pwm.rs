@@ -161,7 +161,7 @@ use crate::{
     gpio::{self, gpioa, gpiob},
     hal::PwmPin,
     pac::{TIM15, TIM16, TIM17, TIM2},
-    rcc::{Clocks, Enable, Reset},
+    rcc::{BusTimerClock, Clocks, Enable, Reset},
     time::rate::*,
 };
 
@@ -269,7 +269,7 @@ pub struct PwmChannel<X, T> {
 }
 
 macro_rules! pwm_timer_private {
-    ($timx:ident, $TIMx:ty, $res:ty, $pclkz:ident, $enable_break_timer:expr, [$($TIMx_CHy:ident),+], [$($x:ident),+]) => {
+    ($timx:ident, $TIMx:ty, $res:ty, $enable_break_timer:expr, [$($TIMx_CHy:ident),+], [$($x:ident),+]) => {
         /// Create one or more output channels from a TIM Peripheral
         /// This function requires the maximum resolution of the duty cycle,
         /// the period of the PWM signal and the frozen clock configuration.
@@ -304,10 +304,8 @@ macro_rules! pwm_timer_private {
             });
 
             // Set the pre-scaler
-            // TODO: This is repeated in the timer/pwm module.
-            // It might make sense to move into the clocks as a crate-only property.
-            // TODO: ppre1 is used in timer.rs (never ppre2), should this be dynamic?
-            let clock_freq = clocks.$pclkz().0 * if clocks.ppre1() == 1 { 1 } else { 2 };
+            // Replace `rcc::BusTimerClock` with `Timer::Instance`
+            let clock_freq = <$TIMx as BusTimerClock>::timer_clock(clocks).0;
             let prescale_factor = clock_freq / res as u32 / freq.integer();
             // NOTE(write): uses all bits of this register.
             tim.psc.write(|w| w.psc().bits(prescale_factor as u16 - 1));
@@ -331,12 +329,11 @@ macro_rules! pwm_timer_private {
 }
 
 macro_rules! pwm_timer_basic {
-    ($timx:ident, $TIMx:ty, $res:ty, $pclkz:ident, [$($TIMx_CHy:ident),+], [$($x:ident),+]) => {
+    ($timx:ident, $TIMx:ty, $res:ty, [$($TIMx_CHy:ident),+], [$($x:ident),+]) => {
         pwm_timer_private!(
             $timx,
             $TIMx,
             $res,
-            $pclkz,
             |_| (),
             [$($TIMx_CHy),+],
             [$($x),+]
@@ -345,12 +342,11 @@ macro_rules! pwm_timer_basic {
 }
 
 macro_rules! pwm_timer_with_break {
-    ($timx:ident, $TIMx:ty, $res:ty, $pclkz:ident, [$($TIMx_CHy:ident),+], [$($x:ident),+]) => {
+    ($timx:ident, $TIMx:ty, $res:ty, [$($TIMx_CHy:ident),+], [$($x:ident),+]) => {
         pwm_timer_private!(
             $timx,
             $TIMx,
             $res,
-            $pclkz,
             |tim: &$TIMx| tim.bdtr.modify(|_, w| w.moe().set_bit()),
             [$($TIMx_CHy),+],
             [$($x),+]
@@ -605,7 +601,6 @@ macro_rules! tim1_common {
             tim1,
             TIM1,
             u16,
-            pclk2,
             [Tim1Ch1, Tim1Ch2, Tim1Ch3, Tim1Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
@@ -717,7 +712,6 @@ pwm_timer_basic!(
     tim2,
     TIM2,
     u32,
-    pclk1,
     [Tim2Ch1, Tim2Ch2, Tim2Ch3, Tim2Ch4],
     [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
 );
@@ -826,7 +820,6 @@ macro_rules! tim3_common {
             tim3,
             TIM3,
             u16,
-            pclk1,
             [Tim3Ch1, Tim3Ch2, Tim3Ch3, Tim3Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
@@ -967,7 +960,6 @@ macro_rules! tim4_common {
             tim4,
             TIM4,
             u16,
-            pclk1,
             [Tim4Ch1, Tim4Ch2, Tim4Ch3, Tim4Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
@@ -1065,7 +1057,6 @@ macro_rules! tim5 {
             tim5,
             TIM5,
             u32,
-            pclk1,
             [Tim5Ch1, Tim5Ch2, Tim5Ch3, Tim5Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
@@ -1119,7 +1110,6 @@ macro_rules! tim8 {
             tim8,
             TIM8,
             u16,
-            pclk2,
             [Tim8Ch1, Tim8Ch2, Tim8Ch3, Tim8Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
@@ -1191,7 +1181,6 @@ macro_rules! tim12 {
             tim12,
             TIM12,
             u16,
-            pclk1,
             [Tim12Ch1, Tim12Ch2],
             [PwmChannel, PwmChannel]
         );
@@ -1231,7 +1220,7 @@ macro_rules! tim13 {
         /// Output Compare Channel 4 of Timer 13 (type state)
         pub struct Tim13Ch4 {}
 
-        pwm_timer_basic!(tim13, TIM13, u16, pclk1, [Tim13Ch1], [PwmChannel]);
+        pwm_timer_basic!(tim13, TIM13, u16, [Tim13Ch1], [PwmChannel]);
 
         // Channels
         pwm_pin_for_pwm_channel!(TIM13, Tim13Ch1, u16, cc1e, ccr1, ccr);
@@ -1263,7 +1252,7 @@ macro_rules! tim14 {
         /// Output Compare Channel 4 of Timer 14 (type state)
         pub struct Tim14Ch4 {}
 
-        pwm_timer_basic!(tim14, TIM14, u16, pclk1, [Tim14Ch1], [PwmChannel]);
+        pwm_timer_basic!(tim14, TIM14, u16, [Tim14Ch1], [PwmChannel]);
 
         // Channels
         pwm_pin_for_pwm_channel!(TIM14, Tim14Ch1, u16, cc1e, ccr1, ccr);
@@ -1286,7 +1275,6 @@ pwm_timer_with_break!(
     tim15,
     TIM15,
     u16,
-    pclk2,
     [Tim15Ch1, Tim15Ch2],
     [PwmChannel, PwmChannel]
 );
@@ -1336,7 +1324,7 @@ pwm_channel2_pin!(TIM15, Tim15Ch2, output_to_pf10, gpiof::PF10<AF3>);
 
 // TIM16
 
-pwm_timer_with_break!(tim16, TIM16, u16, pclk2, [Tim16Ch1], [PwmChannel]);
+pwm_timer_with_break!(tim16, TIM16, u16, [Tim16Ch1], [PwmChannel]);
 
 // Channels
 pwm_pin_for_pwm_n_channel!(TIM16, Tim16Ch1, u16, cc1e, cc1ne, ccr1, ccr);
@@ -1365,7 +1353,7 @@ pwm_channel1n_pin!(TIM16, Tim16Ch1, output_to_pb6, gpiob::PB6<AF1>);
 
 // TIM17
 
-pwm_timer_with_break!(tim17, TIM17, u16, pclk2, [Tim17Ch1], [PwmChannel]);
+pwm_timer_with_break!(tim17, TIM17, u16, [Tim17Ch1], [PwmChannel]);
 
 // Channels
 pwm_pin_for_pwm_n_channel!(TIM17, Tim17Ch1, u16, cc1e, cc1ne, ccr1, ccr);
@@ -1410,7 +1398,6 @@ macro_rules! tim19 {
             tim19,
             TIM19,
             u16,
-            pclk2,
             [Tim19Ch1, Tim19Ch2, Tim19Ch3, Tim19Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
@@ -1464,7 +1451,6 @@ macro_rules! tim20 {
             tim20,
             TIM20,
             u16,
-            pclk2,
             [Tim20Ch1, Tim20Ch2, Tim20Ch3, Tim20Ch4],
             [PwmChannel, PwmChannel, PwmChannel, PwmChannel]
         );
