@@ -1,5 +1,5 @@
 [package]
-edition = "2018"
+edition = "2021"
 authors = [
     "Dylan Frankland <dylan@frankland.io>",
     "Sh3Rm4n <f.vioel@gmail.com>",
@@ -19,7 +19,7 @@ exclude = [
     ".markdownlint.yml"
 ]
 resolver = "2"
-rust-version = "1.54"
+rust-version = "1.59"
 
 [workspace]
 members = [
@@ -39,7 +39,7 @@ cortex-m = "0.7.4"
 cortex-m-rt = "0.7"
 defmt = { version = ">=0.2.3, <0.4.0", optional = true }
 embedded-dma = "0.2.0"
-embedded-hal = { version = "0.2.5", features = ["unproven"] }
+embedded-hal = { version = "0.2.7", features = ["unproven"] }
 embedded-time = "0.12.0"
 nb = "1.0.0"
 paste = "1.0.5"

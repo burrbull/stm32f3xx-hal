@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
-No changes.
+- Use const generics for pins. The MSRV was bumped to 1.59 ([#316])
 
 ## [v0.9.0] - 2022-03-06
 
@@ -554,6 +554,7 @@ let clocks = rcc
 [defmt]: https://github.com/knurling-rs/defmt
 [filter]: https://defmt.ferrous-systems.com/filtering.html
 
+[#316]: https://github.com/stm32-rs/stm32f3xx-hal/pull/316
 [#314]: https://github.com/stm32-rs/stm32f3xx-hal/pull/314
 [#309]: https://github.com/stm32-rs/stm32f3xx-hal/pull/309
 [#308]: https://github.com/stm32-rs/stm32f3xx-hal/pull/308
