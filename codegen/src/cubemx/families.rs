@@ -10,7 +10,7 @@ pub fn load_f3(db: &Db) -> Result<Family> {
     load(db)?
         .families
         .into_iter()
-        .find(|f| f.name == "STM32F3")
+        .find(|f| f.name == "STM32H7")
         .context("STM32F3 family not found")
 }
 
